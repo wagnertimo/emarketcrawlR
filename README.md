@@ -38,6 +38,9 @@ Before using this R package, please check that you have installed the following 
 A big disadvantage of the function is, that the website of EPEX SPOT only provides information of two days on one site. Hence a request to retrieve a longer time period of data can take awhile since the function has to make a request for every two days within that time interval.
 
 ```r
+# Set Logging to print out the state of process including a progress bar
+setLogging(TRUE)
+
 # Get the hourly (default) last price data in the given time period
 lastPrices <- getIntradayContinuousEPEXSPOT("2017-05-20", "2017-05-26", "60")
 

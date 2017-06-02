@@ -76,7 +76,7 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60") {
 
     postResponse <- POST(url, body = payload, encode = "form")
 
-    parsedHtml <- htmlParse(content(postResponse, "text"))
+    parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
     r <- rbind(r, parseICEPEXSPOT(parsedHtml))
 
     # update progress bar

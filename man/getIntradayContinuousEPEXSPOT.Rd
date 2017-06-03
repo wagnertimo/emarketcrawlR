@@ -4,14 +4,17 @@
 \alias{getIntradayContinuousEPEXSPOT}
 \title{getIntradayContinuousEPEXSPOT}
 \usage{
-getIntradayContinuousEPEXSPOT(startDate, endDate, product = "60")
+getIntradayContinuousEPEXSPOT(startDate, endDate, product = "60",
+  country = "DE")
 }
 \arguments{
-\item{startDate}{-}
+\item{startDate}{- Set the start date for the price data period}
 
-\item{endDate}{-}
+\item{endDate}{- Set the end date for the price data period}
 
 \item{product}{- Sets which product should be crawled. There are hourly ("60"), 30min ("30") and 15min ("15") data. Default value is "60" for the hourly data.}
+
+\item{country}{- Defines the country from which the data should be crawled. Default value is "DE". There is also "FR" (France) and "CH" (Swiss)}
 }
 \value{
 a data.frame with DateTime as POSIXct object and Last prices of hourly data.
@@ -19,7 +22,7 @@ a data.frame with DateTime as POSIXct object and Last prices of hourly data.
 \description{
 This function returns the price data of the EPEX SPOT Continuous Intraday Trading for a time period. STATUS QUO only last prices
 #' In december 2011 the 15min products started in Germany // For the Intrady-Auction (important for Bilanzkreisverantwortliche) the 15min products were introducd in december 2014
-In june 2013 the 15min products started in Swiss
+In june 2013 the 15min products started in Swiss. France has only 1h and 30min products.
 At EPEX SPOT website there seem to be always two days in one table at the site.
 It is also only possible to get one day (or two in the table) at once. No time period option.
 The data is only retrievable via the html document

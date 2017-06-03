@@ -4,7 +4,7 @@
 
 setLogging(FALSE)
 
-c <- getIntradayContinuousEPEXSPOT("2017-05-23", "2017-05-25", "15")
+c <- getIntradayContinuousEPEXSPOT("2017-05-23", "2017-05-25", "60", "FR")
 class(c)
 c
 

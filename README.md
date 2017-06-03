@@ -56,3 +56,35 @@ head(prices)
 ```
 
 
+#### 2. Intraday Auction at EPEX SPOT
+
+The function `getIntradayAuctionEPEXSPOT()` retrieves the intraday auction data of the EPEX SPOT in Paris. Therefore it crawls the website https://www.epexspot.com/en/market-data/intradayauction/quarter-auction-table/. You can specify a time period in the format YYYY-MM-DD, a trading product (the time in minutes 15, block prices, or base and peak load prices). This kind of auction is only available for the german market.
+
+On the website are the last past six days of the requested date given. This allows to crawl 7 days of data with one request (this is a bit more than in the case of the `getIntradayContinuousEPEXSPOT()` function). Keep in mind that larger time frames will take awhile.
+
+The blocks are defined as follows:
+- Off-Peak (00-00 & 07-00 & 20-00 & 23-00) 
+- Baseload Price with Volume (00-00 & 23-00) 
+- Off-Peak 1 (00-00 & 07-00) 
+- Peakload Price with Volume (08-00 & 19-00)
+- Sun Peak (10-00 & 15-00) 
+- Off-Peak 2 (20-00 & 23-00) 
+
+```r
+# Set Logging to print out the state of process including a progress bar
+setLogging(TRUE)
+
+# Get the 15min auction price data in the given time period of the german intra. auction market at EPEX SPOT. 
+auctionPrices <- getIntradayAuctionEPEXSPOT("2017-05-19", "2017-05-26")
+
+head(auctionPrices)
+# Output:
+#              DateTime Prices Volume OffPeak OffPeak1 SunPeak OffPeak2 BasePrice BaseVolume PeakPrice PeakVolume
+# 1 2017-05-19 00:00:00  34.28  694.7   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+# 2 2017-05-19 00:15:00  30.59  291.1   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+# 3 2017-05-19 00:30:00  28.75  276.8   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+# 4 2017-05-19 00:45:00  23.50  546.1   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+# 5 2017-05-19 01:00:00  31.32  528.1   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+# 6 2017-05-19 01:15:00  26.95  185.7   30.42    27.78   37.28     35.7     33.88      53489     37.33    27486.8
+
+```

@@ -4,10 +4,15 @@
 
 setLogging(FALSE)
 
-c <- getIntradayContinuousEPEXSPOT("2017-05-23", "2017-05-25", "60", "FR")
-class(c)
-c
+lastPrices <- getIntradayContinuousEPEXSPOT("2017-05-20", "2017-05-26", "15", "DE")
 
-rm(b,h)
+auctionPrices <- getIntradayAuctionEPEXSPOT("2017-05-19", "2017-05-26")
+
+head(auctionPrices)
+
+getIntradayAuctionEPEXSPOT("2017-05-20", "2017-05-26", "15")
 
 names(c)
+
+
+

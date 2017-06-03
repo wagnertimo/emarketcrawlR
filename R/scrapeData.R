@@ -17,8 +17,8 @@ setLogging <- function(logger) {
 
 #' @title getIntradayContinuousEPEXSPOT
 #'
-#' @description This function returns the price data of the EPEX SPOT Continuous Intraday Trading for a time period. STATUS QUO only last prices
-#' #' In december 2011 the 15min products started in Germany // For the Intrady-Auction (important for Bilanzkreisverantwortliche) the 15min products were introducd in december 2014
+#' @description This function returns the price data of the EPEX SPOT Continuous Intraday Trading for a time period.
+#' In december 2011 the 15min products started in Germany // For the Intrady-Auction (important for Bilanzkreisverantwortliche) the 15min products were introducd in december 2014
 #' In june 2013 the 15min products started in Swiss. France has only 1h and 30min products.
 #' At EPEX SPOT website there seem to be always two days in one table at the site.
 #' It is also only possible to get one day (or two in the table) at once. No time period option.
@@ -30,7 +30,7 @@ setLogging <- function(logger) {
 #' @param product - Sets which product should be crawled. There are hourly ("60"), 30min ("30") and 15min ("15") data. Default value is "60" for the hourly data.
 #' @param country - Defines the country from which the data should be crawled. Default value is "DE". There is also "FR" (France) and "CH" (Swiss)
 #'
-#' @return a data.frame with DateTime as POSIXct object and Last prices of hourly data.
+#' @return a data.frame with DateTime as POSIXct object and the cont. intra. trading prices
 #'
 #' @examples
 #' h <- getIntradayContinuousEPEXSPOT("2017-05-20", "2017-05-26", "60")
@@ -196,7 +196,7 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   #return(index_price_list)
 }
 
-# Helper function for @seealso parseICEPEXSPOT
+# Helper function
 # Allows complex patterns for sequence method
 cseq <- function(from, to, by){
   times <- (to-from) %/% sum(by)
@@ -205,13 +205,196 @@ cseq <- function(from, to, by){
 }
 
 
+
+#' @title getIntradayAuctionEPEXSPOT
 #'
-#' Two possible sources: from EEX website or from EPEX SPOT Website. EPEX SPOT has few days on one site EEX only one day
+#' @description This function returns the price data of the EPEX SPOT Intraday Auction for a time period.
+#' Only for German Market. Only 15min data, bock prices with base and peak
+#' https://www.epexspot.com/en/market-data/intradayauction
 #'
-#' example link for 2017-05-25 for german/austrian market: https://www.epexspot.com/en/market-data/dayaheadauction/auction-table/2017-05-25/DE/24
+#' Always get 7 days on one website (request). Date in request link is the latest date.
 #'
-getDayAheadAuctionEEX <- function(startDate, endDate, product) {
-  print("Hello, world!")
+#'
+#' @param startDate - Set the start date for the price data period
+#' @param endDate - Set the end date for the price data period
+#'
+#' @return a data.frame with DateTime as POSIXct object and intraday auction price data of the given product. The columns are DateTime and the 15min Prices with the Volume as well as daily data of: OffPeak, OffPeak1, SunPeak, OffPeak2, BasePrice", BaseVolume, PeakPrice, PeakVolume
+#'
+#' @examples
+#' h <- getIntradayAuctionEPEXSPOT("2017-05-20", "2017-05-26")
+#'
+#' @export
+#'
+getIntradayAuctionEPEXSPOT <- function(startDate, endDate) {
+
+  library(logging)
+  library(httr)
+  library(XML)
+  library(dplyr)
+
+  # Setup the logger and handlers
+  basicConfig(level="DEBUG") # parameter level = x, with x = debug(10), info(20), warn(30), critical(40) // setLevel()
+  #nameLogFile <- paste("getReserveNeeds_", Sys.time(), ".txt", sep="")
+  #addHandler(writeToFile, file=nameLogFile, level='DEBUG')
+
+  sdate <- as.Date(startDate, "%Y-%m-%d")
+  edate <- as.Date(endDate, "%Y-%m-%d")
+  # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
+  # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
+  dates_array = seq(sdate, edate, by="days")
+
+  r = data.frame()
+  # Init progress bar // CAUTION --> the length of auctionIds can be longer than needed (retrieves all auctionIds but stops at the input end date)
+  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = length(dates_array) - 1, style = 3)
+
+  for(i in seq(length(dates_array), 1, -7)) {
+
+    if(getOption("logging")) loginfo(paste("getIntradayAuctionEPEXSPOT - Call for: ", dates_array[i], " - ", dates_array[i-6], " | REMEBER 7 dates on site!"))
+
+    url = paste("https://www.epexspot.com/en/market-data/intradayauction/quarter-auction-table/", dates_array[i], "/DE", sep="")
+
+    payload = list();
+
+    postResponse <- POST(url, body = payload, encode = "form")
+
+    parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
+    r <- rbind(r, parseIAEPEXSPOT(parsedHtml, dates_array[i]))
+
+    # update progress bar
+    if(getOption("logging")) setTxtProgressBar(pb, length(dates_array) - i + 1)
+
+  }
+
+  # CLose the progress bar
+  if(getOption("logging")) close(pb)
+
+  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) %>% arrange(DateTime)
+
+  if(getOption("logging")) loginfo(paste("getIntradayAuctionEPEXSPOT - DONE"))
+
+  return(r)
+
 }
 
+
+# Helper function for @seealso getIntradayAuctionEPEXSPOT
+#
+parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
+
+  latestDate = as.POSIXct(paste(latestDate, "00:00", sep = ""), tz = "Europe/Berlin")
+  timeList <- format(seq.POSIXt(as.POSIXct(latestDate - 6*86400), as.POSIXct(latestDate + 86400 - 900), by = "15 min"), "%Y-%m-%d %H:%M", tz="Europe/Berlin")
+
+  # init the data.frame with the DateTimes of the seven days with 15minute interval
+  df1 <- data.frame(DateTime = timeList)
+
+
+  # xpath for 15mins (product)
+  x <- xpathSApply(htmlDoc, "id('quarter_auction_table_wrapp')/table/tbody/tr[contains(@class, 'hour')]/td/text()", saveXML)
+  # price is every ... entry. It starts with the earliest date till the latest date
+  # price starts with 4, vol with 12
+  prices <- c()
+  vols <- c()
+  for(day in 0:6) {
+    prices <- c(prices, x[seq(4 + day, length(x), 18)])
+    vols <- c(vols, x[seq(12 + day, length(x), 18)])
+  }
+
+  df1 <- cbind(df1, Prices = prices, Volume = vols)
+
+  #xpath for block prices (product)
+  # id('tab_de')/x:table[2]/tbody/tr/td[contains(@class, 'title')]/../td
+  y <- xpathSApply(htmlDoc, "id('tab_de')/table[2]/tbody/tr/td[contains(@class, 'title')]/../td/text()", saveXML)
+  offPeak <- c()
+  offPeak1 <- c()
+  sunPeak <- c()
+  offPeak2 <- c()
+  for(day in 0:6) {
+    offPeak <- c(offPeak, rep(y[2 + day],96))
+    offPeak1 <- c(offPeak1, rep(y[18 + day],96))
+    sunPeak <- c(sunPeak, rep(y[34 + day],96))
+    offPeak2 <- c(offPeak2, rep(y[42 + day],96))
+  }
+
+  df1 <- cbind(df1, OffPeak = offPeak, OffPeak1 = offPeak1, SunPeak = sunPeak, OffPeak2 = offPeak2)
+
+  # xpath for base and peak loads prices (also in block prices xpath) AND VOLUME  (product)
+  # id('tab_de')/x:table[1]/tbody/tr/td
+  z <- xpathSApply(htmlDoc, "id('tab_de')/table[1]/tbody/tr/td/text()", saveXML)
+  base_price <- c()
+  base_vol <- c()
+  peak_price <- c()
+  peak_load <- c()
+  for(day in 0:6) {
+    base_price <- c(base_price, rep(z[2 + day],96))
+    base_vol <- c(base_vol, rep(z[10 + day],96))
+    peak_price <- c(peak_price, rep(z[25 + day],96))
+    peak_load <- c(peak_load, rep(z[33 + day],96))
+  }
+
+  df1 <- cbind(df1, BasePrice = base_price, BaseVolume = base_vol, PeakPrice = peak_price, PeakVolume = peak_load)
+
+  #Format DataSet
+  df1$DateTime = as.POSIXct(df1$DateTime)
+  df1$Prices = as.numeric(levels(df1$Prices))[df1$Prices]
+  df1$Volume = as.numeric(gsub(",", "", df1$Volume))
+  df1$OffPeak = as.numeric(levels(df1$OffPeak))[df1$OffPeak]
+  df1$OffPeak1 = as.numeric(levels(df1$OffPeak1))[df1$OffPeak1]
+  df1$SunPeak = as.numeric(levels(df1$SunPeak))[df1$SunPeak]
+  df1$OffPeak2 = as.numeric(levels(df1$OffPeak2))[df1$OffPeak2]
+  df1$BasePrice = as.numeric(levels(df1$BasePrice))[df1$BasePrice]
+  df1$BaseVolume = as.numeric(gsub(",", "", df1$BaseVolume))
+  df1$PeakPrice = as.numeric(levels(df1$PeakPrice))[df1$PeakPrice]
+  df1$PeakVolume = as.numeric(gsub(",", "", df1$PeakVolume))
+
+
+  return(df1)
+
+}
+
+
+
+
+
+
+#' @title getDayAheadAuctionEPEXSPOT
+#'
+#' @description This function returns the price data of the EPEX SPOT Day-Ahead-Auction for a time period.
+#' For french, german (Phelix) and swiss (swissix) --> MCC = Market Coulped Contracts??
+#' https://www.epexspot.com/en/market-data/dayaheadauction
+#'
+#' Always get 7 days on one website (request). Date in request link is the latest date.
+#'
+#' @param startDate - Set the start date for the price data period
+#' @param endDate - Set the end date for the price data period
+#' @param product - Sets which product should be crawled. There is hourly price data ("60"), block price data ("block") and the base and peak load price data ("base", "peak") data. Default value is "60" for the hourly data.
+#' @param country - Defines the country from which the data should be crawled. Default value is "DE". There is also "FR" (France) and "CH" (Swiss)
+#'
+#' @return a data.frame with DateTime as POSIXct object and Last prices of hourly data.
+#'
+#' @examples
+#' h <- getDayAheadAuctionEPEXSPOT("2017-05-20", "2017-05-26", "60")
+#'
+#' @export
+#'
+getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, product = "60", country = "DE") {
+
+
+
+  parseDAAEPEXSPOT(response, product, country)
+
+}
+
+
+parseDAAEPEXSPOT <- function(htmlDoc, product, country) {
+
+  # xpath for 60mins (product)
+  paste("id('tab_", tolower(country), "')/table[3]/tbody/tr/td", sep = "")
+
+  # xpath for block prices (product)
+  paste("id('tab_", tolower(country), ")/x:table[2]/tbody/tr/td[contains(@class, 'title')]/../td", sep = "")
+
+  # xpath for base and peak loads prices (also in block prices xpath) AND VOLUME (product)
+  paste("id('tab_", tolower(country), "')/x:table[1]/tbody/tr/td", sep = "")
+
+}
 

@@ -4,10 +4,12 @@
 
 setLogging(FALSE)
 
-h <- getIntradayContinuousEPEXSPOT("2017-01-01", "2017-05-26", "60")
-
+b <- getIntradayContinuousEPEXSPOT("2017-05-20", "2017-05-26", "60")
+b
 plot(h, type="l")
 head(h)
+
+as.numeric(gsub(",", "", b[1,9]))
 
 
 # DateTime Last

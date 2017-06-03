@@ -122,16 +122,39 @@ parseICEPEXSPOT <- function(htmlDoc) {
   tds_list <- xpathSApply(htmlDoc, "id('content')/div/table/tbody/tr/td[contains(@class, 'toggle_30min_info_closed')]/../td/text()", saveXML)
   # every 17th entry starting at the 4th e.g. 4. 21. ...
   last_price_1 <- as.numeric(tds_list[seq(4, length(tds_list)-1, 17)])
+  low_1 <- as.numeric(tds_list[seq(2, length(tds_list)-1, 17)])
+  high_1 <- as.numeric(tds_list[seq(3, length(tds_list)-1, 17)])
+  weighted_avg_1 <- as.numeric(tds_list[seq(5, length(tds_list)-1, 17)])
+  idx_1 <- as.numeric(tds_list[seq(6, length(tds_list)-1, 17)])
+  id3_1 <- as.numeric(tds_list[seq(7, length(tds_list)-1, 17)])
+  buy_vol_1 <- gsub(",", "", tds_list[seq(8, length(tds_list)-1, 17)])
+  sell_vol_1 <- gsub(",", "", tds_list[seq(9, length(tds_list), 17)])
   # CAUTION: WHAT IF NO SECOND PRICE ?????
   # Last price of second date
   # every 17th entry starting at the 12th e.g. 12. 29. ...
   last_price_2 <- as.numeric(tds_list[seq(12, length(tds_list)-1, 17)])
+  low_2 <- as.numeric(tds_list[seq(10, length(tds_list)-1, 17)])
+  high_2 <- as.numeric(tds_list[seq(11, length(tds_list)-1, 17)])
+  weighted_avg_2 <- as.numeric(tds_list[seq(13, length(tds_list)-1, 17)])
+  idx_2 <- as.numeric(tds_list[seq(14, length(tds_list)-1, 17)])
+  id3_2 <- as.numeric(tds_list[seq(15, length(tds_list)-1, 17)])
+  buy_vol_2 <- gsub(",", "", tds_list[seq(16, length(tds_list)-1, 17)])
+  sell_vol_2 <- gsub(",", "", tds_list[seq(17, length(tds_list), 17)])
 
   # CAUTION: WHAT IF NO SECOND PRICE ?????
   # Combine Dates and hours to a DateTime array
   d <- as.POSIXct(c(paste(date_list[1], hour_list), paste(date_list[2], hour_list)), tz = "Europe/Berlin")
 
-  df <- data.frame(DateTime = d, Last = c(last_price_1, last_price_2))
+  df <- data.frame(DateTime = d,
+                   Last = c(last_price_1, last_price_2),
+                   Low = c(low_1, low_2),
+                   High = c(high_1, high_2),
+                   Weighted_Avg = c(weighted_avg_1, weighted_avg_2),
+                   Idx = c(idx_1, idx_2),
+                   ID3 = c(id3_1, id3_2),
+                   Buy_Vol = c(buy_vol_1, buy_vol_2),
+                   Sell_Vol = c(sell_vol_1, sell_vol_2)
+                   )
 
 
   return(df)

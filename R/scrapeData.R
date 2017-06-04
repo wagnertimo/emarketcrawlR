@@ -353,9 +353,6 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 
 
 
-
-
-
 #' @title getDayAheadAuctionEPEXSPOT
 #'
 #' @description This function returns the price data of the EPEX SPOT Day-Ahead-Auction for a time period.
@@ -366,7 +363,6 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 #'
 #' @param startDate - Set the start date for the price data period
 #' @param endDate - Set the end date for the price data period
-#' @param product - Sets which product should be crawled. There is hourly price data ("60"), block price data ("block") and the base and peak load price data ("base", "peak") data. Default value is "60" for the hourly data.
 #' @param country - Defines the country from which the data should be crawled. Default value is "DE". There is also "FR" (France) and "CH" (Swiss)
 #'
 #' @return a data.frame with DateTime as POSIXct object and Last prices of hourly data.
@@ -376,25 +372,174 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 #'
 #' @export
 #'
-getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, product = "60", country = "DE") {
+getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
 
+  library(logging)
+  library(httr)
+  library(XML)
+  library(dplyr)
 
+  # Setup the logger and handlers
+  basicConfig(level="DEBUG") # parameter level = x, with x = debug(10), info(20), warn(30), critical(40) // setLevel()
+  #nameLogFile <- paste("getReserveNeeds_", Sys.time(), ".txt", sep="")
+  #addHandler(writeToFile, file=nameLogFile, level='DEBUG')
 
-  parseDAAEPEXSPOT(response, product, country)
+  sdate <- as.Date(startDate, "%Y-%m-%d")
+  edate <- as.Date(endDate, "%Y-%m-%d")
+  # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
+  # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
+  dates_array = seq(sdate, edate, by="days")
+
+  r = data.frame()
+  # Init progress bar // CAUTION --> the length of auctionIds can be longer than needed (retrieves all auctionIds but stops at the input end date)
+  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = length(dates_array) - 1, style = 3)
+
+  for(i in seq(length(dates_array), 1, -7)) {
+
+    if(getOption("logging")) loginfo(paste("getDayAheadAuctionEPEXSPOT - Call for: ", dates_array[i], " - ", dates_array[i-6], " | REMEBER 7 dates on site!"))
+
+    url = paste("https://www.epexspot.com/en/market-data/dayaheadauction/auction-table/", dates_array[i], "/", country, sep="")
+
+    payload = list();
+
+    postResponse <- POST(url, body = payload, encode = "form")
+
+    parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
+    r <- rbind(r, parseDAAEPEXSPOT(parsedHtml, country, dates_array[i]))
+
+    # update progress bar
+    if(getOption("logging")) setTxtProgressBar(pb, length(dates_array) - i + 1)
+
+  }
+
+  # CLose the progress bar
+  if(getOption("logging")) close(pb)
+
+  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) %>% arrange(DateTime)
+
+  if(getOption("logging")) loginfo(paste("getDayAheadAuctionEPEXSPOT - DONE"))
+
+  return(r)
+
 
 }
 
+# Helper function for @seealso getDayAheadAuctionEPEXSPOT
+#
+parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
-parseDAAEPEXSPOT <- function(htmlDoc, product, country) {
+  latestDate = as.POSIXct(paste(latestDate, "00:00", sep = ""), tz = "Europe/Berlin")
+  timeList <- format(seq.POSIXt(as.POSIXct(latestDate - 6*86400), as.POSIXct(latestDate + 86400 - 3600), by = "60 min"), "%Y-%m-%d %H:%M", tz="Europe/Berlin")
+
+  # init the data.frame with the DateTimes of the seven days with 15minute interval
+  df1 <- data.frame(DateTime = timeList)
+
 
   # xpath for 60mins (product)
-  paste("id('tab_", tolower(country), "')/table[3]/tbody/tr/td", sep = "")
+  x <- xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')/table[3]/tbody/tr/td/text()", sep = ""), saveXML)
+  prices <- c()
+  vols <- c()
+  for(day in 0:6) {
+    prices <- c(prices, x[seq(3 + day, length(x), 18)])
+    vols <- c(vols, x[seq(12 + day, length(x), 18)])
+  }
+
+  df1 <- cbind(df1, Prices = prices, Volume = vols)
 
   # xpath for block prices (product)
-  paste("id('tab_", tolower(country), ")/x:table[2]/tbody/tr/td[contains(@class, 'title')]/../td", sep = "")
+  y <- xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')/table[2]/tbody/tr/td[contains(@class, 'title')]/../td/text()", sep = ""), saveXML)
+  middleNight <- c()
+  earlyMorning <- c()
+  lateMorning <- c()
+  earlyAfternoon <- c()
+  rushHour <- c()
+  offPeak2 <- c()
+  night <- c()
+  offPeak1 <- c()
+  business <- c()
+  offPeak <- c()
+  morning <- c()
+  highNoon <- c()
+  afternoon <- c()
+  evening <- c()
+  sunPeak <- c()
+  for(day in 0:6) {
+    middleNight <- c(middleNight, rep(y[2 + day],24))
+    earlyMorning <- c(earlyMorning, rep(y[10 + day],24))
+    lateMorning <- c(lateMorning, rep(y[18 + day],24))
+    earlyAfternoon <- c(earlyAfternoon, rep(y[26 + day],24))
+    rushHour <- c(rushHour, rep(y[34 + day],24))
+    offPeak2 <- c(offPeak2, rep(y[42 + day],24))
+    night <- c(night, rep(y[50 + day],24))
+    offPeak1 <- c(offPeak1, rep(y[58 + day],24))
+    business <- c(business, rep(y[66 + day],24))
+    offPeak <- c(offPeak, rep(y[74 + day],24))
+    morning <- c(morning, rep(y[82 + day],24))
+    highNoon <- c(highNoon, rep(y[90 + day],24))
+    afternoon <- c(afternoon, rep(y[98 + day],24))
+    evening <- c(evening, rep(y[106 + day],24))
+    sunPeak <- c(sunPeak, rep(y[114 + day],24))
+  }
+
+  df1 <- cbind(df1, MiddleNight = middleNight,
+                    EarlyMorning = earlyMorning,
+                    LateMorning = lateMorning,
+                    EarlyAfternoon = earlyAfternoon,
+                    RushHour = rushHour,
+                    OffPeak2 = offPeak2,
+                    Night = night,
+                    OffPeak1 = offPeak1,
+                    Business = business,
+                    OffPeak = offPeak,
+                    Morning = morning,
+                    HighNoon = highNoon,
+                    Afternoon = afternoon,
+                    Evening = evening,
+                    SunPeak = sunPeak)
 
   # xpath for base and peak loads prices (also in block prices xpath) AND VOLUME (product)
-  paste("id('tab_", tolower(country), "')/x:table[1]/tbody/tr/td", sep = "")
+  #paste("id('tab_", tolower(country), "')/table[1]/tbody/tr/td", sep = "")
+  z <- xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')/table[1]/tbody/tr/td/text()", sep = ""), saveXML)
+  base_price <- c()
+  base_vol <- c()
+  peak_price <- c()
+  peak_load <- c()
+  for(day in 0:6) {
+    base_price <- c(base_price, rep(z[2 + day],24))
+    base_vol <- c(base_vol, rep(z[10 + day],24))
+    peak_price <- c(peak_price, rep(z[25 + day],24))
+    peak_load <- c(peak_load, rep(z[33 + day],24))
+  }
+
+  df1 <- cbind(df1, BasePrice = base_price, BaseVolume = base_vol, PeakPrice = peak_price, PeakVolume = peak_load)
+
+  #Format DataSet
+  df1$DateTime = as.POSIXct(df1$DateTime)
+  df1$Prices = as.numeric(levels(df1$Prices))[df1$Prices]
+  df1$Volume = as.numeric(gsub(",", "", df1$Volume))
+
+  df1$OffPeak = as.numeric(levels(df1$OffPeak))[df1$OffPeak]
+  df1$OffPeak1 = as.numeric(levels(df1$OffPeak1))[df1$OffPeak1]
+  df1$SunPeak = as.numeric(levels(df1$SunPeak))[df1$SunPeak]
+  df1$OffPeak2 = as.numeric(levels(df1$OffPeak2))[df1$OffPeak2]
+
+  df1$MiddleNight = as.numeric(levels(df1$MiddleNight))[df1$MiddleNight]
+  df1$EarlyMorning = as.numeric(levels(df1$EarlyMorning))[df1$EarlyMorning]
+  df1$LateMorning = as.numeric(levels(df1$LateMorning))[df1$LateMorning]
+  df1$EarlyAfternoon = as.numeric(levels(df1$EarlyAfternoon))[df1$EarlyAfternoon]
+  df1$Night = as.numeric(levels(df1$Night))[df1$Night]
+  df1$Business = as.numeric(levels(df1$Business))[df1$Business]
+  df1$Morning = as.numeric(levels(df1$Morning))[df1$Morning]
+  df1$HighNoon = as.numeric(levels(df1$HighNoon))[df1$HighNoon]
+  df1$Afternoon = as.numeric(levels(df1$Afternoon))[df1$Afternoon]
+  df1$Evening = as.numeric(levels(df1$Evening))[df1$Evening]
+
+  df1$BasePrice = as.numeric(levels(df1$BasePrice))[df1$BasePrice]
+  df1$BaseVolume = as.numeric(gsub(",", "", df1$BaseVolume))
+  df1$PeakPrice = as.numeric(levels(df1$PeakPrice))[df1$PeakPrice]
+  df1$PeakVolume = as.numeric(gsub(",", "", df1$PeakVolume))
+
+  return(df1)
 
 }
 

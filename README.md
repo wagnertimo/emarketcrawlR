@@ -63,7 +63,7 @@ head(prices)
 
 ```
 
-** Plotting Continuous Intraday Trading data **
+**Plotting Continuous Intraday Trading data**
 
 The package has a built-in function for a quick plot to visualize the price (Low, High, Last in €/MWh) and volume (buy and sell in GWh) data. The function does not return a plot object since it uses `grid.arrange`. The plot is directly outputted. The plot contains heavy graphic elements. Therfore it is not appropriate to use it for a large time period.
 

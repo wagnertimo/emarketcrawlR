@@ -13,7 +13,10 @@ Imports:
     dplyr,
     tidyr,
     magrittr,
-    ggplot2
+    ggplot2,
+    scales,
+    grid,
+    gridExtra
 Author: Timo Wagner
 Maintainer: Timo Wagner <wagnertimo@gmx.de>
 Description: More about what it does (maybe more than one line)

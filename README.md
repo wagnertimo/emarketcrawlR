@@ -26,6 +26,9 @@ Before using this R package, please check that you have installed the following 
 - `lubridate`
 - `dplyr`
 - `logging`
+- `scales`
+- `grid`
+- `gridExtra`
 
 
 ### Usage
@@ -54,6 +57,18 @@ head(prices)
 # 6 2017-05-20 01:15:00  2.8 25.0 13.7        10.75 10.75 10.69   220.4    220.4      21.22      18.82
 
 ```
+
+** Plotting Continuous Intraday Trading data **
+
+The package has a built-in function for a quick plot to visualize the price (Low, High, Last in €/MWh) and volume (buy and sell in GWh) data. The function does not return a plot object since it uses `grid.arrange`. The plot is directly outputted. The plot contains heavy graphic elements. Therfore it is not appropriate to use it for a large time period.
+
+```r
+# Get new data. Just a three days
+lastPrices <- getIntradayContinuousEPEXSPOT("2017-05-26", "2017-05-28", "15", "DE")
+
+qplotIntradayContinuous(lastPrices)
+```
+![](graphics/iqplotIntra.png)
 
 
 #### 2. Intraday Auction at EPEX SPOT

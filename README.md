@@ -1,4 +1,4 @@
-# emarketcrawlR: crawling data from the european energy market (EPEX SPOT) - 
+# emarketcrawlR: crawling data from the european energy market (EPEX SPOT)
 
 
 ## Goal

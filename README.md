@@ -1,4 +1,4 @@
-# emarketcrawlR <br/> – The R package for crawling data of the european energy market (EPEX SPOT) - 
+# emarketcrawlR: crawling data from the european energy market (EPEX SPOT) - 
 
 
 ## Goal
@@ -23,7 +23,7 @@ install_github("wagnertimo/emarketcrawlR")
 ```
 ### Library dependencies
 
-Before using this R package, please check that you have installed the following R packages. Normally during the installation of the package those dependencies will also be installed. If not you have to do it manually.
+Before using this R package, please check that you have installed the following R packages. Normally with the installation of the package those dependencies will also be installed. If not, you have to do it manually.
 
 - `httr`
 - `xml2`

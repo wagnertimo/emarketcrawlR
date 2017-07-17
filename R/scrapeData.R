@@ -74,7 +74,7 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60", co
 
   r = data.frame()
   # Init progress bar // CAUTION --> the length of auctionIds can be longer than needed (retrieves all auctionIds but stops at the input end date)
-  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = length(dates_array) - 1, style = 3)
+  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = ifelse(length(dates_array) > 1, length(dates_array) - 1, length(dates_array)), style = 3)
 
   for(i in seq(length(dates_array), 1, -2)) {
 
@@ -97,7 +97,7 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60", co
   # CLose the progress bar
   if(getOption("logging")) close(pb)
 
-  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) %>% arrange(DateTime)
+  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) # %>% arrange(DateTime) # do not arrange --> it should already be in order --> ALSO DST otherwise makes problems
 
   if(getOption("logging")) loginfo(paste("getIntradayContinuousEPEXSPOT - DONE"))
 
@@ -126,8 +126,8 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   # Time: Hour (First 00 - 01) --> But only 00 needed
   # ---> contains all time slots: id('content')/div/table/tbody/tr/td[contains(@class, 'title')]
   times_list <- xpathSApply(htmlDoc, "id('content')/div/table/tbody/tr/td[contains(@class, 'title')]/text()", saveXML)
-  # Clean the strings --> remove newline and whitespcaes
-  times_list <- gsub("\n", "", gsub(" ", "", times_list, fixed = TRUE))
+  # Clean the strings --> remove newline and whitespcaes and in case of DST+1 the 02a and 02b
+  times_list <- gsub("a|b", "", gsub("\n", "", gsub(" ", "", times_list, fixed = TRUE)))
 
   # get every hour: 00-01 01-02 ...and also reduce to 00 01 ... and append by ":00" for nice format 00:00 01:00 ...
   # for other product shift start by 1 (30min) 2 (15min)
@@ -166,8 +166,8 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   tds_list <- xpathSApply(htmlDoc, xpath, saveXML)
 
   # initialize data.frames with DateTime for the two dates on the site
-  df1 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[1], times_list)), tz = "Europe/Berlin"))
-  df2 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[2], times_list)), tz = "Europe/Berlin"))
+  df1 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[1], times_list)), format = "%Y-%m-%d %H:%M", tz = "Europe/Berlin"))
+  df2 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[2], times_list)), format = "%Y-%m-%d %H:%M", tz = "Europe/Berlin"))
 
   end <- if(country == "DE") 17 else 15
   shift1 <- if(country == "DE") 0 else 1
@@ -191,6 +191,10 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   df2 <- cbind(df2, Index_Base = base_2, Index_Peak = peak_2)
   r <- rbind(df1, df2)
   colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
+
+  # Get rid of NA columns when there is DST+1
+  r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+
 
   return(r)
   #return(index_price_list)

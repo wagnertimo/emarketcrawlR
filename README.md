@@ -1,10 +1,15 @@
-# emarketcrawlR <br/> – The R package for crawling data of the german energy market (EPEX SPOT) - 
+# emarketcrawlR: crawling data from the european energy market (EPEX SPOT)
 
 
 ## Goal
 
-This R package provides functions to crawl the german energy market at https://www.epexspot.com
+This R package provides functions to crawl the european energy market EPEX SPOT in Paris at https://www.epexspot.com
+There are three trading auctions:
+ - Intraday Continuous Trading at EPEX SPOT
+ - Intraday Auction at EPEX SPOT
+ - Day-Ahead Auction at EPEX SPOT
 
+For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MWh) as well as different block prices for that day, especially base and peak load prices.
 
 ## Get Started
 
@@ -18,7 +23,7 @@ install_github("wagnertimo/emarketcrawlR")
 ```
 ### Library dependencies
 
-Before using this R package, please check that you have installed the following R packages. Normally during the installation of the package those dependencies will also be installed. If not you have to do it manually.
+Before using this R package, please check that you have installed the following R packages. Normally with the installation of the package those dependencies will also be installed. If not, you have to do it manually.
 
 - `httr`
 - `xml2`
@@ -58,7 +63,7 @@ head(prices)
 
 ```
 
-** Plotting Continuous Intraday Trading data **
+**Plotting Continuous Intraday Trading data**
 
 The package has a built-in function for a quick plot to visualize the price (Low, High, Last in €/MWh) and volume (buy and sell in GWh) data. The function does not return a plot object since it uses `grid.arrange`. The plot is directly outputted. The plot contains heavy graphic elements. Therfore it is not appropriate to use it for a large time period.
 

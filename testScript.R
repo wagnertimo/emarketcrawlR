@@ -19,19 +19,7 @@ latestDate = as.POSIXct(paste("2016-03-28", "00:00", sep = ""), tz = "Europe/Ber
 
 
 
-lastPrices <- getIntradayContinuousEPEXSPOT("2016-03-26", "2016-03-27", "60", "DE")
-
-# No data for 30min contracts
-lastPrices2 <- getIntradayContinuousEPEXSPOT("2016-10-29", "2016-10-30", "30", "DE")
-
-lastPrices3 <- getIntradayContinuousEPEXSPOT("2016-10-29", "2016-10-30", "60", "FR")
-
-
-
-
-
-
-
+auctionPrices <- getIntradayAuctionEPEXSPOT("2016-03-21", "2016-03-27")
 
 
 

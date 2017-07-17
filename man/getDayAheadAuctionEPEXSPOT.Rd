@@ -4,15 +4,12 @@
 \alias{getDayAheadAuctionEPEXSPOT}
 \title{getDayAheadAuctionEPEXSPOT}
 \usage{
-getDayAheadAuctionEPEXSPOT(startDate, endDate, product = "60",
-  country = "DE")
+getDayAheadAuctionEPEXSPOT(startDate, endDate, country = "DE")
 }
 \arguments{
 \item{startDate}{- Set the start date for the price data period}
 
 \item{endDate}{- Set the end date for the price data period}
-
-\item{product}{- Sets which product should be crawled. There is hourly price data ("60"), block price data ("block") and the base and peak load price data ("base", "peak") data. Default value is "60" for the hourly data.}
 
 \item{country}{- Defines the country from which the data should be crawled. Default value is "DE". There is also "FR" (France) and "CH" (Swiss)}
 }

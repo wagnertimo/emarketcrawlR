@@ -391,8 +391,8 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
   dates_array = seq(sdate, edate, by="days")
 
   r = data.frame()
-  # Init progress bar // CAUTION --> the length of auctionIds can be longer than needed (retrieves all auctionIds but stops at the input end date)
-  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = length(dates_array) - 1, style = 3)
+  # Init progress bar
+  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = ifelse(length(dates_array) > 1, length(dates_array) - 1, length(dates_array)), style = 3)
 
   for(i in seq(length(dates_array), 1, -7)) {
 
@@ -415,6 +415,7 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
   # CLose the progress bar
   if(getOption("logging")) close(pb)
 
+  # subset the data to the appropriate input date range
   r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) %>% arrange(DateTime)
 
   if(getOption("logging")) loginfo(paste("getDayAheadAuctionEPEXSPOT - DONE"))
@@ -424,16 +425,47 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
 
 }
 
-# Helper function for @seealso getDayAheadAuctionEPEXSPOT
-#
+#' Helper function for @seealso getDayAheadAuctionEPEXSPOT
+#'
 parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
-  latestDate = as.POSIXct(paste(latestDate, "00:00", sep = ""), tz = "Europe/Berlin")
-  timeList <- format(seq.POSIXt(as.POSIXct(latestDate - 6*86400), as.POSIXct(latestDate + 86400 - 3600), by = "60 min"), "%Y-%m-%d %H:%M", tz="Europe/Berlin")
+  # latestDate = as.POSIXct(paste(latestDate, "00:00", sep = ""), tz = "Europe/Berlin")
+  # timeList <- format(seq.POSIXt(as.POSIXct(latestDate - 6*86400), as.POSIXct(latestDate + 86400 - 3600), by = "60 min"), "%Y-%m-%d %H:%M", tz="Europe/Berlin")
+  #
 
-  # init the data.frame with the DateTimes of the seven days with 15minute interval
+
+
+  # Get the hours --> check if length is 24 or in DST+1 (CEST-->CET) 25 // For DST-1 it is still 24 since 7 days are displayed
+  # --> FIRST read out the dates
+  # --> THEN read out the starting hours and build the total date string ---> !! For DST+1 there is 02a (- 02b) and 02b (- 03)
+
+  # Read out the dates --> id('tab_de')//span[contains(@class, 'date')]/text() # retrieves date range
+  dateRange = xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')//span[contains(@class, 'date')]/text()", sep = ""), saveXML)
+  # Delete the line break and the whitespaces and then split the date range on "-" to get the start and end date
+  dateRange = gsub(" ", "", gsub("\n", "", dateRange))
+  sd = strsplit(dateRange, "-")[[1]][1]
+  ed = strsplit(dateRange, "-")[[1]][2]
+
+
+  # Read Hours --> id('tab_de')/table[3]/tbody/tr/td[contains(@class, 'title')]
+  hourRange = xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')/table[3]/tbody/tr/td[contains(@class, 'title')]/text()", sep = ""), saveXML)
+  hourRange = gsub(" ", "", gsub("\n", "", hourRange))
+  hourVector = unlist(lapply(strsplit(hourRange, "-"), function(x) x[1]))
+
+  timeList = hourVector
+
+  # Build DateTime List
+  # --> 02a and 02b are converted to 02 --> there will be two 02 hours
+  hourVector = paste(gsub("a|b", "", hourVector), ":00:00", sep="")
+  # Get date range
+  dateRange = seq.Date(as.Date(sd, "%d/%m/%Y"), as.Date(ed, "%d/%m/%Y"), by = "1 day")
+  # Combine with all combinations the dates with the hours --> In cas of DST+1, dates will have also two 2hours --> those have to be removed after the values "-" are added
+  timeList = apply(expand.grid(hourVector, dateRange), 1, function(x) paste(x[2], x[1]))
+
+
+
+  # init the data.frame with the read out and build DateTimes
   df1 <- data.frame(DateTime = timeList)
-
 
   # xpath for 60mins (product)
   x <- xpathSApply(htmlDoc, paste("id('tab_", tolower(country), "')/table[3]/tbody/tr/td/text()", sep = ""), saveXML)
@@ -463,22 +495,26 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   afternoon <- c()
   evening <- c()
   sunPeak <- c()
+
+  # set the day offset in hours: 24h in normal case (24*7 = 168 entries) and in DST+1 case 25h (25*7 = 175 entries)
+  dayoffset = ifelse(nrow(df1) > 168, 25, 24)
+
   for(day in 0:6) {
-    middleNight <- c(middleNight, rep(y[2 + day],24))
-    earlyMorning <- c(earlyMorning, rep(y[10 + day],24))
-    lateMorning <- c(lateMorning, rep(y[18 + day],24))
-    earlyAfternoon <- c(earlyAfternoon, rep(y[26 + day],24))
-    rushHour <- c(rushHour, rep(y[34 + day],24))
-    offPeak2 <- c(offPeak2, rep(y[42 + day],24))
-    night <- c(night, rep(y[50 + day],24))
-    offPeak1 <- c(offPeak1, rep(y[58 + day],24))
-    business <- c(business, rep(y[66 + day],24))
-    offPeak <- c(offPeak, rep(y[74 + day],24))
-    morning <- c(morning, rep(y[82 + day],24))
-    highNoon <- c(highNoon, rep(y[90 + day],24))
-    afternoon <- c(afternoon, rep(y[98 + day],24))
-    evening <- c(evening, rep(y[106 + day],24))
-    sunPeak <- c(sunPeak, rep(y[114 + day],24))
+    middleNight <- c(middleNight, rep(y[2 + day],dayoffset))
+    earlyMorning <- c(earlyMorning, rep(y[10 + day],dayoffset))
+    lateMorning <- c(lateMorning, rep(y[18 + day],dayoffset))
+    earlyAfternoon <- c(earlyAfternoon, rep(y[26 + day],dayoffset))
+    rushHour <- c(rushHour, rep(y[34 + day],dayoffset))
+    offPeak2 <- c(offPeak2, rep(y[42 + day],dayoffset))
+    night <- c(night, rep(y[50 + day],dayoffset))
+    offPeak1 <- c(offPeak1, rep(y[58 + day],dayoffset))
+    business <- c(business, rep(y[66 + day],dayoffset))
+    offPeak <- c(offPeak, rep(y[74 + day],dayoffset))
+    morning <- c(morning, rep(y[82 + day],dayoffset))
+    highNoon <- c(highNoon, rep(y[90 + day],dayoffset))
+    afternoon <- c(afternoon, rep(y[98 + day],dayoffset))
+    evening <- c(evening, rep(y[106 + day],dayoffset))
+    sunPeak <- c(sunPeak, rep(y[114 + day],dayoffset))
   }
 
   df1 <- cbind(df1, MiddleNight = middleNight,
@@ -505,16 +541,16 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   peak_price <- c()
   peak_load <- c()
   for(day in 0:6) {
-    base_price <- c(base_price, rep(z[2 + day],24))
-    base_vol <- c(base_vol, rep(z[10 + day],24))
-    peak_price <- c(peak_price, rep(z[25 + day],24))
-    peak_load <- c(peak_load, rep(z[33 + day],24))
+    base_price <- c(base_price, rep(z[2 + day],dayoffset))
+    base_vol <- c(base_vol, rep(z[10 + day],dayoffset))
+    peak_price <- c(peak_price, rep(z[25 + day],dayoffset))
+    peak_load <- c(peak_load, rep(z[33 + day],dayoffset))
   }
 
   df1 <- cbind(df1, BasePrice = base_price, BaseVolume = base_vol, PeakPrice = peak_price, PeakVolume = peak_load)
 
-  #Format DataSet
-  df1$DateTime = as.POSIXct(df1$DateTime)
+  # Format DataSet
+  df1$DateTime = as.POSIXct(df1$DateTime, format = "%Y-%m-%d %H:%M:%S", tz = "Europe/Berlin")
   df1$Prices = as.numeric(levels(df1$Prices))[df1$Prices]
   df1$Volume = as.numeric(gsub(",", "", df1$Volume))
 
@@ -539,7 +575,25 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   df1$PeakPrice = as.numeric(levels(df1$PeakPrice))[df1$PeakPrice]
   df1$PeakVolume = as.numeric(gsub(",", "", df1$PeakVolume))
 
+
+  # Get rid of the additional 2 hour in the week of the DST+1 --> rule: if datetime hour == 2 and NA in the values of Prices and Volume --> delete row
+  df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Prices) & is.na(df1$Volume)),]
+
+  # And delete the "empty" 2 hour in DST-1 --> the whole row is filled with NA also the index number (rowname) is NA (but as character "NA")
+  df1 = df1[rownames(df1)[rownames(df1) != "NA"] , ]
+
   return(df1)
 
 }
+
+
+
+
+
+
+
+
+
+
+
 

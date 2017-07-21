@@ -59,7 +59,7 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60", co
   edate <- as.Date(endDate, "%Y-%m-%d")
   # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
   # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
-  dates_array = seq(sdate, edate, by="days")
+  dates_array = seq(sdate, edate, by = "days")
 
 
   # url = paste("https://www.epexspot.com/en/market-data/intradaycontinuous/intraday-table/", dates_array[length(dates_array)], "/DE", sep="")
@@ -87,7 +87,7 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60", co
     postResponse <- POST(url, body = payload, encode = "form")
 
     parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
-    r <- rbind(r, parseICEPEXSPOT(parsedHtml, product, country))
+    r <- rbind(parseICEPEXSPOT(parsedHtml, product, country), r)
 
     # update progress bar
     if(getOption("logging")) setTxtProgressBar(pb, length(dates_array) - i + 1)
@@ -262,7 +262,7 @@ getIntradayAuctionEPEXSPOT <- function(startDate, endDate) {
     postResponse <- POST(url, body = payload, encode = "form")
 
     parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
-    r <- rbind(r, parseIAEPEXSPOT(parsedHtml, dates_array[i]))
+    r <- rbind(parseIAEPEXSPOT(parsedHtml, dates_array[i]), r)
 
     # update progress bar
     if(getOption("logging")) setTxtProgressBar(pb, length(dates_array) - i + 1)
@@ -465,7 +465,7 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
     postResponse <- POST(url, body = payload, encode = "form")
 
     parsedHtml <- htmlParse(content(postResponse, "text", encoding = "UTF-8"))
-    r <- rbind(r, parseDAAEPEXSPOT(parsedHtml, country, dates_array[i]))
+    r <- rbind(parseDAAEPEXSPOT(parsedHtml, country, dates_array[i]), r)
 
     # update progress bar
     if(getOption("logging")) setTxtProgressBar(pb, length(dates_array) - i + 1)
@@ -476,7 +476,7 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
   if(getOption("logging")) close(pb)
 
   # subset the data to the appropriate input date range
-  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate) %>% arrange(DateTime)
+  r <- r %>% filter(format(DateTime, "%Y-%m-%d") >= sdate)
 
   if(getOption("logging")) loginfo(paste("getDayAheadAuctionEPEXSPOT - DONE"))
 

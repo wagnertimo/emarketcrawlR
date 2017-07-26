@@ -194,6 +194,8 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
 
   # Get rid of NA columns when there is DST+1
   r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  # Get rid of NA columns when there is DST-1
+  r = r[!(hour(r$DateTime) == 1 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
 
 
   return(r)

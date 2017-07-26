@@ -12,7 +12,12 @@ lastPrices <- getIntradayContinuousEPEXSPOT("2013-03-31", "2013-03-31", "15", "D
 
 lastPrices <- getIntradayContinuousEPEXSPOT("2013-10-26", "2013-10-27", "60", "DE")
 
+lastPrices <- getIntradayAuctionEPEXSPOT("2013-10-26", "2013-10-27")
+lastPrices <- getIntradayAuctionEPEXSPOT("2015-03-28", "2015-03-29")
 
+
+lastPrices <- getDayAheadAuctionEPEXSPOT("2015-10-24", "2015-10-25", "DE")
+lastPrices <- getDayAheadAuctionEPEXSPOT("2015-03-28", "2015-03-29", "DE")
 
 
 auctionPrices <- getIntradayAuctionEPEXSPOT("2017-05-19", "2017-05-26")

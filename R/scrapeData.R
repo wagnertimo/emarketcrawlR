@@ -385,6 +385,8 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 
   # Get rid of NA columns when there is DST+1
   df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Prices) & is.na(df1$Volume)), ]
+  # Get rid of NA columns when there is DST-1
+  df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
   return(df1)
 
@@ -632,9 +634,12 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
   # Get rid of the additional 2 hour in the week of the DST+1 --> rule: if datetime hour == 2 and NA in the values of Prices and Volume --> delete row
   df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Prices) & is.na(df1$Volume)),]
+  # Get rid of NA columns when there is DST-1
+  df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
   # And delete the "empty" 2 hour in DST-1 --> the whole row is filled with NA also the index number (rowname) is NA (but as character "NA")
   df1 = df1[rownames(df1)[rownames(df1) != "NA"] , ]
+
 
   return(df1)
 

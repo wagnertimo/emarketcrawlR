@@ -34,3 +34,8 @@ auctionPrices <- getIntradayAuctionEPEXSPOT("2016-03-21", "2016-03-27")
 
 
 
+Sys.setenv(TZ = "Europe/Berlin")
+Sys.timezone()
+
+
+

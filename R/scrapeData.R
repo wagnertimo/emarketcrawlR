@@ -55,8 +55,8 @@ getIntradayContinuousEPEXSPOT <- function(startDate, endDate, product = "60", co
   #addHandler(writeToFile, file=nameLogFile, level='DEBUG')
 
 
-  sdate <- as.Date(startDate, "%Y-%m-%d")
-  edate <- as.Date(endDate, "%Y-%m-%d")
+  sdate <- as.Date(startDate, "%Y-%m-%d", tz = "Europe/Berlin")
+  edate <- as.Date(endDate, "%Y-%m-%d", tz = "Europe/Berlin")
   # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
   # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
   dates_array = seq(sdate, edate, by = "days")
@@ -115,7 +115,7 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
 
   if(getOption("logging")) loginfo(paste("parseICEPEXSPOT - Parsing Continuous Intraday EPEX website with 2 dates"))
 
-  date_list <- as.Date(xpathSApply(htmlDoc, "id('content')/div/table/tbody/tr[1]/th[contains(@class, 'date')]/text()", saveXML), "%d/%m/%Y")
+  date_list <- as.Date(xpathSApply(htmlDoc, "id('content')/div/table/tbody/tr[1]/th[contains(@class, 'date')]/text()", saveXML), "%d/%m/%Y", tz = "Europe/Berlin")
   # Get the Base and Peak index price for both dates
   index_price_list <- xpathSApply(htmlDoc, "id('content')/div/table/tbody/tr/th[contains(@class, 'date')]/text()", saveXML)
   base_1 <- sapply(strsplit(gsub("\n", "", gsub(" ", "", index_price_list[3:6], fixed = TRUE)), ":"), function(x) as.numeric(x[2]))[1]
@@ -243,8 +243,8 @@ getIntradayAuctionEPEXSPOT <- function(startDate, endDate) {
   #nameLogFile <- paste("getReserveNeeds_", Sys.time(), ".txt", sep="")
   #addHandler(writeToFile, file=nameLogFile, level='DEBUG')
 
-  sdate <- as.Date(startDate, "%Y-%m-%d")
-  edate <- as.Date(endDate, "%Y-%m-%d")
+  sdate <- as.Date(startDate, "%Y-%m-%d", tz = "Europe/Berlin")
+  edate <- as.Date(endDate, "%Y-%m-%d", tz = "Europe/Berlin")
   # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
   # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
   dates_array = seq(sdate, edate, by="days")
@@ -311,7 +311,7 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
   # adds the 15mins to the hours
   hourVector = addQuartersToHourVector(hourVector)
   # Get date range
-  dateRange = seq.Date(as.Date(sd, "%d/%m/%Y"), as.Date(ed, "%d/%m/%Y"), by = "1 day")
+  dateRange = seq.Date(as.Date(sd, "%d/%m/%Y", tz = "Europe/Berlin"), as.Date(ed, "%d/%m/%Y", tz = "Europe/Berlin"), by = "1 day")
   # Combine with all combinations the dates with the hours --> In cas of DST+1, dates will have also two 2hours --> those have to be removed after the values "-" are added
   timeList = apply(expand.grid(hourVector, dateRange), 1, function(x) paste(x[2], x[1]))
 
@@ -448,8 +448,8 @@ getDayAheadAuctionEPEXSPOT <- function(startDate, endDate, country = "DE") {
   #nameLogFile <- paste("getReserveNeeds_", Sys.time(), ".txt", sep="")
   #addHandler(writeToFile, file=nameLogFile, level='DEBUG')
 
-  sdate <- as.Date(startDate, "%Y-%m-%d")
-  edate <- as.Date(endDate, "%Y-%m-%d")
+  sdate <- as.Date(startDate, "%Y-%m-%d", tz = "Europe/Berlin")
+  edate <- as.Date(endDate, "%Y-%m-%d", tz = "Europe/Berlin")
   # calls for every day in dates array --> !! maybe every two days, depends if always two dates for one date request are shown in table
   # Therefore it is good to start with the loop at the last date, then the day before the last date can be also on the table
   dates_array = seq(sdate, edate, by="days")
@@ -514,7 +514,7 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   # --> 02a and 02b are converted to 02 --> there will be two 02 hours
   hourVector = paste(gsub("a|b", "", hourVector), ":00:00", sep="")
   # Get date range
-  dateRange = seq.Date(as.Date(sd, "%d/%m/%Y"), as.Date(ed, "%d/%m/%Y"), by = "1 day")
+  dateRange = seq.Date(as.Date(sd, "%d/%m/%Y", tz = "Europe/Berlin"), as.Date(ed, "%d/%m/%Y", tz = "Europe/Berlin"), by = "1 day")
   # Combine with all combinations the dates with the hours --> In cas of DST+1, dates will have also two 2hours --> those have to be removed after the values "-" are added
   timeList = apply(expand.grid(hourVector, dateRange), 1, function(x) paste(x[2], x[1]))
 

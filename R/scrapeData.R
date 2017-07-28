@@ -193,7 +193,10 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
 
   # Get rid of NA columns when there is DST+1
-  r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
+    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  }
+
   # Get rid of NA columns when there is DST-1
   #r = r[!(hour(r$DateTime) == 1 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
 
@@ -209,6 +212,45 @@ cseq <- function(from, to, by){
   x <- cumsum(c(from, rep(by, times+1)))
   x[x<=to]
 }
+
+# returns boolean if date (input) is the last sunday in october == DST time saving at 2hour
+isDSTDateInOctober <- function(date) {
+  library(lubridate)
+
+  return(as.Date(lastDayOfMonth(1,10,year(date)), tz = "Europe/Berlin") == date)
+
+}
+
+# returns the last date in a given month for a given day (sunday == 1, monday == 2, ...)
+lastDayOfMonth <- function(day, month, year){
+  library(lubridate)
+  library(zoo)
+
+  lastDate = as.Date(zoo::as.yearmon(paste(year,"-",month,"-01",sep = "")), frac = 1, tz = "Europe/Berlin")
+  # 1 = sunday , 2 = monday ... 7 saturday
+  lastWeekDay = wday(lastDate)
+  diff = lastWeekDay - day
+  if(diff == 0) {
+    return(lastDate)
+  }
+  else {
+    # e.g target sunday = 1 and lastWeekDay monday = 2 --> diff 2 - 1 = 1 --> shift lastDate back 1 (diff) day(s)
+    # e.g target sunday = 1 and lastWeekDay tuesday = 3 --> diff 3 - 1 = 2 --> shift lastDate back 2 (diff) day(s)
+    # e.g target wednesday = 4 and lastWeekDay tuesday = 3 --> diff 3 - 4 = -1 --> if negative --> 7 - diff = 6 --->shift lastDate back 6 (diff) day(s)
+    # e.g target tuesday = 3 and lastWeekDay monday = 2 --> diff 2 - 3 = -1 --> if negative --> 7 - diff = 6 --->shift lastDate back 6 (diff) day(s)
+    if(diff < 0) {
+      # shift lastDate back by 7 - diff
+      shiftback = 7  + diff
+    }
+    else {
+      # diff positive --> shift lastDate back by diff
+      shiftback = diff
+    }
+
+    return(lastDate - shiftback)
+  }
+}
+
 
 
 
@@ -384,7 +426,9 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 
 
   # Get rid of NA columns when there is DST+1
-  df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Prices) & is.na(df1$Volume)), ]
+  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
+    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
@@ -632,8 +676,10 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   df1$PeakVolume = as.numeric(gsub(",", "", df1$PeakVolume))
 
 
-  # Get rid of the additional 2 hour in the week of the DST+1 --> rule: if datetime hour == 2 and NA in the values of Prices and Volume --> delete row
-  df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Prices) & is.na(df1$Volume)),]
+  # Get rid of NA columns when there is DST+1
+  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
+    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 

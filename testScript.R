@@ -6,61 +6,47 @@ setLogging(TRUE)
 
 lastPrices <- getIntradayContinuousEPEXSPOT("2012-01-01", "2012-01-02", "15", "DE")
 lastPrices <- getIntradayContinuousEPEXSPOT("2012-02-03", "2012-02-04", "15", "DE")
-r <- getIntradayContinuousEPEXSPOT("2012-02-01", "2012-02-02", "15", "DE")
+
+s <- getIntradayContinuousEPEXSPOT("2011-10-28", "2011-10-30", "60", "DE")
+
+s[2,]$DateTime
+(as.Date(s[2,]$DateTime, tz = "Europe/Berlin")-1)
+
+r = getIntradayContinuousEPEXSPOT("2011-07-01", "2011-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2012-01-01", "2012-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2013-01-01", "2013-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2014-01-01", "2014-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2015-01-01", "2015-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2016-01-01", "2016-12-31", "60", "DE")
+# r = getIntradayContinuousEPEXSPOT("2017-01-01", "2017-06-30", "60", "DE")
+
+# create the time sequence for the data --> this is done because it is not possible to convert the UTC time (with 2 hours at DST to CET)
+t = seq(as.POSIXct("2011-07-01", tz = "Europe/Berlin"), as.POSIXct("2012-01-01", tz = "Europe/Berlin"), by = "hour")
+t = t[1:length(t)-1]
+nrow(r)
+length(t)
+
+head(r)
+tail(r)
 
 
+'%nin%' <- Negate('%in%')
+t[t %nin% r$DateTime]
+
+continuousEPEX_60min.2011.2017$DateTime = t
+nrow(continuousEPEX_60min.2011.2017)
+length(t)
 
 
+attr(continuousEPEX_60min.2011.2017$DateTime, "tzone") = "UTC"
 
+head(continuousEPEX_60min.2011.2017$DateTime)
+nrow(continuousEPEX_60min.2011.2017)
+length(t)
 
-date =  as.Date("2012-10-24", tz = "Europe/Berlin")
-isDSTDateInOctober(date)
-
-# returns boolean if date (input) is the last sunday in october == DST time saving at 2hour
-isDSTDateInOctober <- function(date) {
-  library(lubridate)
-
-  return(as.Date(lastDayOfMonth(1,10,year(date)), tz = "Europe/Berlin") == date)
-
-}
-
-
-lastDayOfMonth <- function(day, month, year){
-  library(lubridate)
-  library(zoo)
-
-  lastDate = as.Date(zoo::as.yearmon(paste(year,"-",month,"-01",sep = "")), frac = 1, tz = "Europe/Berlin")
-  # 1 = sunday , 2 = monday ... 7 saturday
-  lastWeekDay = wday(lastDate)
-  diff = lastWeekDay - day
-  if(diff == 0) {
-    return(lastDate)
-  }
-  else {
-    # e.g target sunday = 1 and lastWeekDay monday = 2 --> diff 2 - 1 = 1 --> shift lastDate back 1 (diff) day(s)
-    # e.g target sunday = 1 and lastWeekDay tuesday = 3 --> diff 3 - 1 = 2 --> shift lastDate back 2 (diff) day(s)
-    # e.g target wednesday = 4 and lastWeekDay tuesday = 3 --> diff 3 - 4 = -1 --> if negative --> 7 - diff = 6 --->shift lastDate back 6 (diff) day(s)
-    # e.g target tuesday = 3 and lastWeekDay monday = 2 --> diff 2 - 3 = -1 --> if negative --> 7 - diff = 6 --->shift lastDate back 6 (diff) day(s)
-    if(diff < 0) {
-      # shift lastDate back by 7 - diff
-      shiftback = 7  + diff
-    }
-    else {
-      # diff positive --> shift lastDate back by diff
-      shiftback = diff
-    }
-
-    return(lastDate - shiftback)
-  }
-}
-
-
-
-
-
-
-r = getIntradayContinuousEPEXSPOT("2015-03-29", "2015-03-29", "60", "DE")
-
+write_csv(continuousEPEX_60min.2011.2017, "continuousEPEX_60min.2011.2017.csv")
+continuousEPEX_60min.2011.2017 = read_csv("continuousEPEX_60min.2011.2017.csv")
+nrow(continuousEPEX_60min.2011.2017)
 
 
 

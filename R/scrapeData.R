@@ -193,8 +193,10 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
 
   # Get rid of NA columns when there is DST+1
-  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
-    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  # There are always two days to be crawled --> so either the day before or after DST has an extra 2 hour obs --> get rid off
+  if ((as.Date(lastDayOfMonth(1,10,year(as.Date(r$DateTime, tz = "Europe/Berlin"))), tz = "Europe/Berlin") - 1) == as.Date(r$DateTime, tz = "Europe/Berlin") |
+      (as.Date(lastDayOfMonth(1,10,year(as.Date(r$DateTime, tz = "Europe/Berlin"))), tz = "Europe/Berlin") + 1) == as.Date(r$DateTime, tz = "Europe/Berlin")){
+     r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
   }
 
   # Get rid of NA columns when there is DST-1

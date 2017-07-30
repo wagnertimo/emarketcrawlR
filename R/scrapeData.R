@@ -189,22 +189,29 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
 
   df1 <- cbind(df1, Index_Base = base_1, Index_Peak = peak_1)
   df2 <- cbind(df2, Index_Base = base_2, Index_Peak = peak_2)
+
+
+  df1 = deleteExtraDSTHour(df1, product)
+  df2 = deleteExtraDSTHour(df2, product)
+
   r <- rbind(df1, df2)
   colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
 
   # Get rid of NA columns when there is DST+1
   # There are always two days to be crawled --> so either the day before or after DST has an extra 2 hour obs --> get rid off
-  if ((as.Date(lastDayOfMonth(1,10,year(as.Date(r$DateTime, tz = "Europe/Berlin"))), tz = "Europe/Berlin") - 1) == as.Date(r$DateTime, tz = "Europe/Berlin") |
-      (as.Date(lastDayOfMonth(1,10,year(as.Date(r$DateTime, tz = "Europe/Berlin"))), tz = "Europe/Berlin") + 1) == as.Date(r$DateTime, tz = "Europe/Berlin")){
-     r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-  }
+
+
+  # if ((as.Date(dst_date, tz = "Europe/Berlin") - 1) == as.Date(r$DateTime, tz = "Europe/Berlin") |
+  #     (as.Date(dst_date, tz = "Europe/Berlin") + 1) == as.Date(r$DateTime, tz = "Europe/Berlin")){
+  #    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  # }
 
   # Get rid of NA columns when there is DST-1
   #r = r[!(hour(r$DateTime) == 1 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
 
 
   return(r)
-  #return(index_price_list)
+
 }
 
 # Helper function
@@ -251,6 +258,65 @@ lastDayOfMonth <- function(day, month, year){
 
     return(lastDate - shiftback)
   }
+}
+
+
+# Helper function
+# Deletes the extra 2am hour at DST (CEST --> CET).
+# This is caused by crawling the table with multiple dates where one date is the DST date (last sunday in october).
+# Then all other dates (before or after, depends where the DST date is located in the table) have also the extra 2 am hour (02a and 02b)
+# Table has 2 columns (dates) in e.g. @seealso getIntradayContinuousEPEXSPOT
+deleteExtraDSTHour <- function(df, time) {
+  library(dplyr)
+  library(lubridate)
+
+
+  # Get rid of NA columns when there is DST+1
+  # There are always two days to be crawled --> so either the day before or after DST has an extra 2 hour obs --> get rid off
+  dst_date = lastDayOfMonth(1,10, year(as.Date(df$DateTime, tz = "Europe/Berlin")))
+  attr(dst_date, "tzone") = "Europe/Berlin"
+
+  if ((as.Date(dst_date, tz = "Europe/Berlin") - 1) == as.Date(df$DateTime, tz = "Europe/Berlin") |
+      (as.Date(dst_date, tz = "Europe/Berlin") + 1) == as.Date(df$DateTime, tz = "Europe/Berlin")){
+
+    d = df[hour(df$DateTime) == 2,]
+    rows = 0
+
+    if(time == "15") {
+      # extra 2am hour occured
+      if(nrow(d) > 4) {
+        # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+        rows = which(hour(df$DateTime) == 2)
+        rows = rows[5:8]
+        # get rid off the extra 2am hours
+        df = df[-rows,]
+      }
+    }
+    else if(time == "30"){
+      # extra 2am hour occured
+      if(nrow(d) > 4) {
+        # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+        rows = which(hour(df$DateTime) == 2)
+        rows = rows[3:4]
+        # get rid off the extra 2am hours
+        df = df[-rows,]
+
+      }
+    }
+    else if(time == "60") {
+      # extra 2am hour occured
+      if(nrow(d) > 1) {
+        # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+        rows = which(hour(df$DateTime) == 2)
+        rows = rows[2]
+        # get rid off the extra 2am hours
+        df = df[-rows,]
+
+      }
+    }
+  }
+
+  return(df)
 }
 
 

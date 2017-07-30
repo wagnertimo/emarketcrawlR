@@ -5,48 +5,82 @@ setLogging(TRUE)
 
 
 lastPrices <- getIntradayContinuousEPEXSPOT("2012-01-01", "2012-01-02", "15", "DE")
-lastPrices <- getIntradayContinuousEPEXSPOT("2012-02-03", "2012-02-04", "15", "DE")
-
-s <- getIntradayContinuousEPEXSPOT("2011-10-28", "2011-10-30", "60", "DE")
-
-s[2,]$DateTime
-(as.Date(s[2,]$DateTime, tz = "Europe/Berlin")-1)
-
-r = getIntradayContinuousEPEXSPOT("2011-07-01", "2011-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2012-01-01", "2012-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2013-01-01", "2013-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2014-01-01", "2014-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2015-01-01", "2015-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2016-01-01", "2016-12-31", "60", "DE")
-# r = getIntradayContinuousEPEXSPOT("2017-01-01", "2017-06-30", "60", "DE")
-
-# create the time sequence for the data --> this is done because it is not possible to convert the UTC time (with 2 hours at DST to CET)
-t = seq(as.POSIXct("2011-07-01", tz = "Europe/Berlin"), as.POSIXct("2012-01-01", tz = "Europe/Berlin"), by = "hour")
-t = t[1:length(t)-1]
-nrow(r)
-length(t)
-
-head(r)
-tail(r)
 
 
-'%nin%' <- Negate('%in%')
-t[t %nin% r$DateTime]
+lastPrices <- getIntradayContinuousEPEXSPOT("2012-10-28", "2012-10-28", "15", "DE")
+lastPrices2 <- getIntradayContinuousEPEXSPOT("2012-10-28", "2012-10-29", "60", "DE")
+lastPrices2 <- getIntradayContinuousEPEXSPOT("2012-10-27", "2012-10-29", "60", "DE")
 
-continuousEPEX_60min.2011.2017$DateTime = t
-nrow(continuousEPEX_60min.2011.2017)
-length(t)
+attr(lastPrices2$DateTime, "tzone")
+
+dst_date = lastDayOfMonth(1,10,2012)
+attr(dst_date, "tzone") = "Europe/Berlin"
+
+lastPrices2 %>% filter(as.Date(DateTime, tz = "Europe/Berlin") == (dst_date - 1))
+
+d = lastPrices2 %>% filter(as.Date(DateTime, tz = "Europe/Berlin") == (dst_date - 1))
+d1 = lastPrices2 %>% filter(as.Date(DateTime, tz = "Europe/Berlin") == (dst_date + 1))
 
 
-attr(continuousEPEX_60min.2011.2017$DateTime, "tzone") = "UTC"
+d2 = deleteExtraDSTHour(d1, "60")
+d1 = d1[-d2,]
 
-head(continuousEPEX_60min.2011.2017$DateTime)
-nrow(continuousEPEX_60min.2011.2017)
-length(t)
 
-write_csv(continuousEPEX_60min.2011.2017, "continuousEPEX_60min.2011.2017.csv")
-continuousEPEX_60min.2011.2017 = read_csv("continuousEPEX_60min.2011.2017.csv")
-nrow(continuousEPEX_60min.2011.2017)
+
+deleteExtraDSTHour <- function(df, time) {
+
+
+  # Get rid of NA columns when there is DST+1
+  # There are always two days to be crawled --> so either the day before or after DST has an extra 2 hour obs --> get rid off
+  dst_date = lastDayOfMonth(1,10,2012)
+  attr(dst_date, "tzone") = "Europe/Berlin"
+
+  if ((as.Date(dst_date, tz = "Europe/Berlin") - 1) == as.Date(df$DateTime, tz = "Europe/Berlin") |
+      (as.Date(dst_date, tz = "Europe/Berlin") + 1) == as.Date(df$DateTime, tz = "Europe/Berlin")){
+
+    d = df[hour(df$DateTime) == 2,]
+    rows = 0
+
+    if(time == "15") {
+      # extra 2am hour occured
+      if(nrow(d) > 4) {
+        # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+        rows = which(hour(df$DateTime) == 2)
+        rows = rows[5:8]
+        # get rid off the extra 2am hours
+        df = df[-rows,]
+      }
+    }
+    else if(time == "30"){
+        # extra 2am hour occured
+        if(nrow(d) > 4) {
+          # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+          rows = which(hour(df$DateTime) == 2)
+          rows = rows[3:4]
+          # get rid off the extra 2am hours
+          df = df[-rows,]
+
+        }
+    }
+    else if(time == "60") {
+      # extra 2am hour occured
+      if(nrow(d) > 1) {
+        # get rows of the 2am hours and save the last 4 (if 15min or 2 if 30min or 1 if 60min) of them --> delete
+        rows = which(hour(df$DateTime) == 2)
+        rows = rows[2]
+        # get rid off the extra 2am hours
+        df = df[-rows,]
+
+      }
+    }
+  }
+
+  return(df)
+}
+
+
+
+
 
 
 

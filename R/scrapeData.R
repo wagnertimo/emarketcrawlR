@@ -494,9 +494,9 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 
 
   # Get rid of NA columns when there is DST+1
-  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
-    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-  }
+  # if (isDSTDateInOctober(as.Date(df1$DateTime, tz = "Europe/Berlin"))){
+  #   df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Low) & is.na(df1$High) & is.na(df1$Last)), ]
+  # }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
@@ -745,9 +745,9 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
 
   # Get rid of NA columns when there is DST+1
-  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
-    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-  }
+  # if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
+  #   r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  # }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 

@@ -494,9 +494,9 @@ parseIAEPEXSPOT <- function(htmlDoc, latestDate) {
 
 
   # Get rid of NA columns when there is DST+1
-  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
-    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-  }
+  # if (isDSTDateInOctober(as.Date(df1$DateTime, tz = "Europe/Berlin"))){
+  #   df1 = df1[!(hour(df1$DateTime) == 2 & is.na(df1$Low) & is.na(df1$High) & is.na(df1$Last)), ]
+  # }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
@@ -745,9 +745,9 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
 
   # Get rid of NA columns when there is DST+1
-  if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
-    r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-  }
+  # if (isDSTDateInOctober(as.Date(r$DateTime, tz = "Europe/Berlin"))){
+  #   r = r[!(hour(r$DateTime) == 2 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
+  # }
   # Get rid of NA columns when there is DST-1
   #df1 = df1[!(hour(df1$DateTime) == 1 & is.na(df1$Prices) & is.na(df1$Volume)), ]
 
@@ -763,6 +763,188 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
 
 
 
+
+
+
+
+#' @title getPHELIXDEFuturesEEX
+#'
+#' @description This function returns the price data of the EEX Phelix DE Futures as seen at https://www.eex.com/en/market-data/power/futures/phelix-de-futures
+#' Prices are in EUR/MWh and Volume in MWh. The returned data.frame mimics the table at the EEX website (+ BestBid/BestAsk volume).
+#' The name column contains no Date or DateTime object (simply a factor).
+#' The data is retrieved by sequentially scraping the data of each day. Therefore the data of the next day (regarding input date) is retrieved.
+#' For the Weekend saturday and sunday data is retrieved (at friday dates).
+#' Since the next data observation is retrieved (because tables are showing a lot of null values) the function is optimized for the "Day" product.
+#' For other products like Week or Year, you will get only the next week or year data of the input date.
+#' Note that the website only provides a limited history of the price data! This also depends on the product (Day, Week etc.)
+#'
+#' @param startDate - Set the start date for the price data period ("YYYY-MM-DD", character)
+#' @param endDate - Set the end date for the price data period ("YYYY-MM-DD", character)
+#' @param product - Set the product type == Day, Weekend, Week, Month, Quarter or Year --> IT IS RECOOMEND TO ONLY USE "DAY"
+#'
+#' @return a data.frame with the columns of the table seen on the EEX website. The name column identifies the product. It is not of type Date or DateTime!
+#'
+#' @examples
+#' df = getPHELIXDEFuturesEEX("2017-08-02", "2017-08-04", "Day")
+#'
+#' @export
+#'
+getPHELIXDEFuturesEEX <- function(startDate, endDate, product) {
+
+  library(logging)
+  library(rjson)
+  library(purrr)
+  library(lubridate)
+
+  # Setup the logger and handlers
+  basicConfig(level="DEBUG") # parameter level = x, with x = debug(10), info(20), warn(30), critical(40) // setLevel()
+
+
+  startDate = as.Date(startDate)
+  endDate = as.Date(endDate)
+
+  # get the startdate befor the input date --> data is always retrieved starting at the next day
+  dateSeq = seq.Date(startDate - 1, endDate,1)
+
+  res = data.frame()
+
+  if(getOption("logging")) pb <- txtProgressBar(min = 0, max = length(dateSeq), style = 3)
+
+
+  for(i in 1:length(dateSeq)) {
+
+    if(getOption("logging")) loginfo(paste("getPHELIXDEFutures - Call PHELIX DE FUTURE price data: ", product ," - ", dateSeq[i]))
+
+    df = getPHELIXDEFuturesForADate(dateSeq[i], product)
+
+    res = rbind(res, df)
+
+    # update progress bar
+    if(getOption("logging")) setTxtProgressBar(pb, length(dateSeq) + i)
+
+  }
+
+  if(getOption("logging")) close(pb)
+
+  if(getOption("logging")) loginfo(paste("getPHELIXDEFutures - DONE"))
+
+
+  return(res)
+}
+
+
+
+#' Helper function for @seealso getPHELIXDEFutures
+#'
+# NOTE: function is optimized for product Day!
+# --> it gets the values of the next day (regarding input date)
+# --> And for a (input) friday, it gets the values of the two following days (saturday and sunday)
+#
+# Tables at https://www.eex.com/en/market-data/power/futures/phelix-de-futures are strangely organized
+#
+# date has to be of class Date, product a chracter
+#
+getPHELIXDEFuturesForADate <- function(date, product) {
+
+
+  year = strsplit(as.character(date), "-")[[1]][1]
+  month = strsplit(as.character(date), "-")[[1]][2]
+  day = strsplit(as.character(date), "-")[[1]][3]
+
+  # url for Phelix DE Futures: P-Power-F-DE-Base-XX --> XX Day, Weekend, Week, Month, Quarter, Year
+  url = paste("https://www.eex.com/data//view/data/detail/ws-power-futures-german_v4/", year, "/", month, ".", day,".json", sep = "")
+  h = rjson::fromJSON(file = url)
+
+  # Base - Day, Weekend, Week, Month, Quarter, Year // Peak - Day, Weekend, Week, Month, Quarter, Year
+  # 12 list elements
+  base = h[[1]]
+  #peak = h[[1]][[8]]
+
+  #base[[1]][base[[1]]$identifier == "P-Power-F-DE-Base-Day"]
+
+  res = data.frame()
+
+  for(block in c("Base", "Peak")) {
+
+    # get the right product --> Base or Peak and Day or Week or Weekend or.....
+    id = paste("P-Power-F-DE-", block, "-", product, sep = "")
+
+    # search through all products and get only the requested ones
+    for(i in 1:length(base)){
+      if(base[[i]]$identifier == id) {
+        r = base[[i]]
+      }
+    }
+
+    # check if there is data for that product -> if not then return empty data.frame
+    if(length(r$rows) != 0) {
+
+      # if friday then add 2 days (saturday and sunday) to the data.frame -> end == 3 (2,3) else get next day info (2)
+      end = ifelse(lubridate::wday(date) == 6, 3, 2) # 6 == friday
+
+      df = data.frame()
+
+      for(i in 2:end) {
+
+        # Get the 1/2/3... entry of the table --> for request date always get the data of the next day
+        k = r$rows[[i]]
+
+        # columns:
+        #
+        OpenInterest = ifelse(is.null(k$data$openInterestNoOfContracts), NA, k$data$openInterestNoOfContracts)# Open Interest Prev. Day
+        LastPrice = ifelse(is.null(k$data$lastTradePrice), NA, k$data$lastTradePrice) # Last Price
+        HighPrice = ifelse(is.null(k$data$highPrice), NA, k$data$highPrice)# High Price
+        LastVolume = ifelse(is.null(k$data$openInterestVolume), NA, k$data$openInterestVolume)# Last Vol.
+        AbsChange = ifelse(is.null(k$data$lastTradeDifference), NA, k$data$lastTradeDifference)# Abs. Change
+        VolumeExchange = ifelse(is.null(k$data$volumeExchange), NA, k$data$volumeExchange)# Vol. Exchange
+        LastVolume = ifelse(is.null(k$data$lastTradeVolume), NA, k$data$lastTradeVolume)# last traded volume
+        VolumeTradeRegister = ifelse(is.null(k$data$volumeOtc), NA, k$data$volumeOtc)# Vol. Trade Registration
+        NoContracts = ifelse(is.null(k$data$noOfTradedContractsTotal), NA, k$data$noOfTradedContractsTotal)# No. of Contracts
+        BestAsk = ifelse(is.null(k$data$bestAskPrice), NA, k$data$bestAskPrice)# Best Ask
+        BestAskVolume = ifelse(is.null(k$data$bestAskVolume), NA, k$data$bestAskVolume)# Best Ask Volume
+        BestBid = ifelse(is.null(k$data$bestBidPrice), NA, k$data$bestBidPrice)# Best Bid
+        BestBidVolume = ifelse(is.null(k$data$bestBidVolume), NA, k$data$bestBidVolume)# Best Bid Volume
+        LastTime = ifelse(is.null(k$data$lastTradeTime), NA, substr(k$data$lastTradeTime, 12, 16)) # Last Time
+        SettlementPrice = ifelse(is.null(k$data$settlementPrice), NA, k$data$settlementPrice)# Settl. Price
+        Name =  strsplit(k$contractIdentifier,"-")[[1]][length(strsplit(k$contractIdentifier,"-")[[1]])] # contractIdentifier
+        # Product types /names
+        #
+        # C-Power-F-DE-Base-Day-2017.08.02
+        # C-Power-F-DE-Base-Week-2017W31
+        # C-Power-F-DE-Peak-Weekend-2017WE47
+        # C-Power-F-DE-Peak-Month-2017.10
+        # C-Power-F-DE-Peak-Quarter-2017Q4
+        # C-Power-F-DE-Peak-Year-2018
+
+        # data.frame
+        df2 = data.frame(Name = Name,
+                         Block = block,
+                         Product = product,
+                         BestBid = BestBid,
+                         BestBidVolume = BestBidVolume,
+                         BestAsk = BestAsk,
+                         BestAskVolume = BestAskVolume,
+                         NoContracts = NoContracts,
+                         LastPrice = LastPrice,
+                         AbsChange = AbsChange,
+                         LastTime = LastTime,
+                         LastVolume = LastVolume,
+                         SettlementPrice = SettlementPrice,
+                         VolumeExchange = VolumeExchange,
+                         VolumeTradeRegister = VolumeTradeRegister,
+                         OpenInterest = OpenInterest
+        )
+
+        df = rbind(df, df2)
+      }
+
+      res = rbind(res, df)
+
+    }
+  }
+
+  return(res)
+}
 
 
 

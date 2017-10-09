@@ -15,6 +15,8 @@ Imports:
     magrittr,
     ggplot2,
     scales,
+    purrr,
+    rjson,
     grid,
     gridExtra
 Author: Timo Wagner

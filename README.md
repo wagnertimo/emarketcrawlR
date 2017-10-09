@@ -1,15 +1,20 @@
-# emarketcrawlR: crawling data from the european energy market (EPEX SPOT)
+# emarketcrawlR: crawling data from the european energy market (EPEX SPOT, EEX)
 
 
 ## Goal
 
-This R package provides functions to crawl the european energy market EPEX SPOT in Paris at https://www.epexspot.com
-There are three trading auctions:
- - Intraday Continuous Trading at EPEX SPOT
- - Intraday Auction at EPEX SPOT
- - Day-Ahead Auction at EPEX SPOT
+This R package provides functions to crawl the european energy market EPEX SPOT in Paris at https://www.epexspot.com and https://www.eex.com
+There are three trading auctions at the EPEX SPOT (status quo: all implemented):
+ - Intraday Continuous Trading: `getIntradayContinuousEPEXSPOT()`
+ - Intraday Auction: `getIntradayAuctionEPEXSPOT()`
+ - Day-Ahead Auction: `getDayAheadAuctionEPEXSPOT()`
 
 For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MWh) as well as different block prices for that day, especially base and peak load prices.
+
+Status quo the PHELIX DE Future price data of the EEX is implemented:
+- Phelix-DE Futures: `getPHELIXDEFuturesEEX()`
+
+
 
 ## Get Started
 
@@ -31,6 +36,8 @@ Before using this R package, please check that you have installed the following 
 - `lubridate`
 - `dplyr`
 - `logging`
+- `purrr`
+- `rjson`
 - `scales`
 - `grid`
 - `gridExtra`
@@ -162,5 +169,37 @@ head(auction)
 
 
 
+#### 4. Phelix-DE Futures at EEX
+
+The function `getPHELIXDEFuturesEEX()` retrieves the Phelix-DE Futures at the EEX. Therefore it crawls the website https://www.eex.com/en/market-data/power/futures/phelix-de-futures. You can specify a time period in the format YYYY-MM-DD, a trading product (Day, Weekend, Week, Month, Quarter or Year, RECOMMENDED: USE DAY). The returned data.frame mimics the table at the EEX website (+ Best Bid/ Best Ask volume). The prices are given in EUR/MWh and the volume in MWh. The name column contains no Date or DateTime object (it is simply a factor).
+
+The data is retrieved by sequentially scraping the data of each day (observation). Therefore the data of the next day (observation, regarding the input date) is retrieved. The weekend data (saturday and sunday ) is retrieved at once on friday dates.
+As you can see, the next data observation is retrieved (because tables are showing a lot of null values) and hence the function is optimized for the "Day" product. For other products like Week or Year, you will get only the next week or next year data given the input date. Note also, that the website only provides a limited history of the price data! This also depends on the product (Day, Week etc.)
+
+```r
+# Set Logging to print out the state of process including a progress bar
+setLogging(TRUE)
+
+# Get the price data of the Day Phelix-DE Futures at EEX from 2017-08-02 till 2017-08-04
+prices <- getPHELIXDEFuturesEEX("2017-08-02", "2017-08-04", "Day")
+
+head(prices)
+# Output:
+#        Name Block Product BestBid BestBidVolume BestAsk BestAskVolume NoContracts LastPrice AbsChange LastTime LastVolume
+# 1 2017.08.02  Base     Day       0             0       0             0          75     33.65      0.15    08:55        600
+# 2 2017.08.02  Peak     Day       0             0       0             0           0        NA     -0.76     <NA>         NA
+# 3 2017.08.03  Base     Day       0             0       0             0          75     27.65     -1.35    10:17        600
+# 4 2017.08.03  Peak     Day       0             0       0             0           0        NA     -1.31     <NA>         NA
+# 5 2017.08.04  Base     Day       0             0       0             0           0        NA      2.31     <NA>         NA
+# 6 2017.08.04  Peak     Day       0             0       0             0           0        NA      0.15     <NA>         NA
+#   SettlementPrice VolumeExchange VolumeTradeRegister OpenInterest
+# 1           33.05           1800                   0            0
+# 2           34.99              0                   0            0
+# 3           28.07           1800                   0           25
+# 4           28.44              0                   0            0
+# 5           24.56              0                   0           75
+# 6           21.65              0                   0            0
+
+```
 
 

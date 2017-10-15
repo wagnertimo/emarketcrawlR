@@ -9,7 +9,7 @@ There are three trading auctions:
  - Intraday Auction at EPEX SPOT
  - Day-Ahead Auction at EPEX SPOT
 
-For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MWh) as well as different block prices for that day, especially base and peak load prices.
+For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MW) as well as different block prices for that day, especially base and peak load prices.
 
 ## Get Started
 

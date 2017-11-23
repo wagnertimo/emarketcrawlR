@@ -9,7 +9,7 @@ There are three trading auctions at the EPEX SPOT (status quo: all implemented):
  - Intraday Auction: `getIntradayAuctionEPEXSPOT()`
  - Day-Ahead Auction: `getDayAheadAuctionEPEXSPOT()`
 
-For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MWh) as well as different block prices for that day, especially base and peak load prices.
+For all auctions, except the Intraday Auction (only german), french, german and swiss market data is available. The crawiling functions for this trading auctions return price data (in €/MWh) and volume (MW) as well as different block prices for that day, especially base and peak load prices.
 
 Status quo the PHELIX DE Future price data of the EEX is implemented:
 - Phelix-DE Futures: `getPHELIXDEFuturesEEX()`

@@ -30,8 +30,8 @@ qplotIntradayContinuous <- function(df) {
   # Lubridate package seems not to be loaded
   # library(lubridate)
 
-  lastPrices$Buy_Vol = lastPrices$Buy_Vol/1000
-  lastPrices$Sell_Vol = lastPrices$Sell_Vol/1000
+  df$Buy_Vol = df$Buy_Vol/1000
+  df$Sell_Vol = df$Sell_Vol/1000
 
   g <- ggplot(df, aes(DateTime)) +
         geom_line(aes(y = Last, colour = "Last")) +

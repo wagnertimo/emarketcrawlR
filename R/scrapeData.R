@@ -169,20 +169,20 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   df1 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[1], times_list)), format = "%Y-%m-%d %H:%M", tz = "Europe/Berlin"))
   df2 <- data.frame(DateTime = as.POSIXct(c(paste(date_list[2], times_list)), format = "%Y-%m-%d %H:%M", tz = "Europe/Berlin"))
 
-  end <- if(country == "DE") 17 else 15
+  end <- if(country == "DE") 19 else 17
   shift1 <- if(country == "DE") 0 else 1
   shift2 <- if(country == "DE") 0 else 2
   # add columns/variables to the initial data.frames
   for(i in 2:end) {
     # after 10 the next date starts
-    if(i < (10 - shift1)) {
+    if(i < (11 - shift1)) {
       # 2nd is Low 3rd High .... buy and sell vol have comma seperated value fot thousands
-      if(i == (8 - shift1) | i == (9 - shift1)) column <- as.numeric(gsub(",", "", tds_list[seq(i, length(tds_list), (17 - shift2))])) else column <- as.numeric(tds_list[seq(i, length(tds_list)-1, (17 - shift2))])
+      if(i == (9 - shift1) | i == (10 - shift1)) column <- as.numeric(gsub(",", "", tds_list[seq(i, length(tds_list), (19 - shift2))])) else column <- as.numeric(tds_list[seq(i, length(tds_list)-1, (19 - shift2))])
       df1 <- cbind(df1, i = column)
     }
     else {
       # buy and sell vol have comma seperated value fot thousands
-      if(i == (16 - shift2) | i == (17 - shift2)) column <- as.numeric(gsub(",", "", tds_list[seq(i, length(tds_list), (17 - shift2))])) else column <- as.numeric(tds_list[seq(i, length(tds_list)-1, (17 - shift2))])
+      if(i == (18 - shift2) | i == (19 - shift2)) column <- as.numeric(gsub(",", "", tds_list[seq(i, length(tds_list), (19 - shift2))])) else column <- as.numeric(tds_list[seq(i, length(tds_list)-1, (19 - shift2))])
       df2 <- cbind(df2, i = column)
     }
   }
@@ -195,7 +195,7 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
   df2 = deleteExtraDSTHour(df2, product)
 
   r <- rbind(df1, df2)
-  colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
+  colnames(r) <- if(country == "DE") c("DateTime","Low","High","Last","Weighted_Avg","Idx","ID3", "ID1","Buy_Vol","Sell_Vol","Index_Base","Index_Peak") else c("DateTime","Low","High","Last","Weighted_Avg","Idx","Buy_Vol","Sell_Vol","Index_Base","Index_Peak")
 
   # Get rid of NA columns when there is DST+1
   # There are always two days to be crawled --> so either the day before or after DST has an extra 2 hour obs --> get rid off
@@ -208,7 +208,6 @@ parseICEPEXSPOT <- function(htmlDoc, product, country) {
 
   # Get rid of NA columns when there is DST-1
   #r = r[!(hour(r$DateTime) == 1 & is.na(r$Low) & is.na(r$High) & is.na(r$Last)), ]
-
 
   return(r)
 
@@ -686,20 +685,20 @@ parseDAAEPEXSPOT <- function(htmlDoc, country, latestDate) {
   }
 
   df1 <- cbind(df1, MiddleNight = middleNight,
-                    EarlyMorning = earlyMorning,
-                    LateMorning = lateMorning,
-                    EarlyAfternoon = earlyAfternoon,
-                    RushHour = rushHour,
-                    OffPeak2 = offPeak2,
-                    Night = night,
-                    OffPeak1 = offPeak1,
-                    Business = business,
-                    OffPeak = offPeak,
-                    Morning = morning,
-                    HighNoon = highNoon,
-                    Afternoon = afternoon,
-                    Evening = evening,
-                    SunPeak = sunPeak)
+               EarlyMorning = earlyMorning,
+               LateMorning = lateMorning,
+               EarlyAfternoon = earlyAfternoon,
+               RushHour = rushHour,
+               OffPeak2 = offPeak2,
+               Night = night,
+               OffPeak1 = offPeak1,
+               Business = business,
+               OffPeak = offPeak,
+               Morning = morning,
+               HighNoon = highNoon,
+               Afternoon = afternoon,
+               Evening = evening,
+               SunPeak = sunPeak)
 
   # xpath for base and peak loads prices (also in block prices xpath) AND VOLUME (product)
   #paste("id('tab_", tolower(country), "')/table[1]/tbody/tr/td", sep = "")
@@ -945,10 +944,4 @@ getPHELIXDEFuturesForADate <- function(date, product) {
 
   return(res)
 }
-
-
-
-
-
-
 

@@ -3,10 +3,11 @@
 library(emarketcrawlR)
 setLogging(TRUE)
 
+prices <- getIntradayContinuousEPEXSPOT("2017-05-20", "2017-05-26", "15", "DE")
+qplotIntradayContinuous(prices)
 
 lastPrices <- getIntradayContinuousEPEXSPOT("2013-03-30", "2013-03-31", "60", "DE")
 lastPrices <- getIntradayContinuousEPEXSPOT("2013-03-31", "2013-03-31", "15", "DE")
-<<<<<<< HEAD
 
 lastPrices <- getIntradayContinuousEPEXSPOT("2013-10-26", "2013-10-27", "60", "DE")
 
@@ -38,9 +39,6 @@ a <- getDayAheadAuctionEPEXSPOT("2017-05-19", "2017-05-28", "CH")
 a <- getDayAheadAuctionEPEXSPOT("2017-06-01", "2017-06-30", "DE")
 
 latestDate = as.POSIXct(paste("2016-03-28", "00:00", sep = ""), tz = "Europe/Berlin")
-
-=======
->>>>>>> 75acdc0d0b729b5d9f61deda529872f2e29c43f5
 
 auctionPrices <- getIntradayAuctionEPEXSPOT("2016-03-21", "2016-03-27")
 

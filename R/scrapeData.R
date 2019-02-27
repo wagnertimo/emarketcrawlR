@@ -836,8 +836,9 @@ getPHELIXDEFuturesEEX <- function(startDate, endDate, product) {
 #' Helper function for @seealso getPHELIXDEFutures
 #'
 # NOTE: function is optimized for product Day!
-# --> it gets the values of the next day (regarding input date)
-# --> And for a (input) friday, it gets the values of the two following days (saturday and sunday)
+# --> it gets the values of the next day (regarding input date), unless its a Saturday or Sunday
+# --> And for a (input) friday, it gets the values of the three following days (saturday, sunday and monday)
+# --> If an error occurs a warning message with the date is displayed, but an empty data.frame is returned
 #
 # Tables at https://www.eex.com/en/market-data/power/futures/phelix-de-futures are strangely organized
 #
@@ -850,8 +851,14 @@ getPHELIXDEFuturesForADate <- function(date, product) {
   month = strsplit(as.character(date), "-")[[1]][2]
   day = strsplit(as.character(date), "-")[[1]][3]
 
+  if(lubridate::wday(date) == 7 || lubridate::wday(date) == 1){
+    return(data.frame())
+  } else{
   # url for Phelix DE Futures: P-Power-F-DE-Base-XX --> XX Day, Weekend, Week, Month, Quarter, Year
-  url = paste("https://www.eex.com/data//view/data/detail/ws-power-futures-german_v4/", year, "/", month, ".", day,".json", sep = "")
+  url = url(paste("https://www.eex.com/data//view/data/detail/ws-power-futures-german_v4/", year, "/", month, ".", day,".json", sep = ""))
+  # makes sure the connection is closed even in case of errors.
+  on.exit(close(url))
+  tryCatch({
   h = rjson::fromJSON(file = url)
 
   # Base - Day, Weekend, Week, Month, Quarter, Year // Peak - Day, Weekend, Week, Month, Quarter, Year
@@ -878,12 +885,13 @@ getPHELIXDEFuturesForADate <- function(date, product) {
     # check if there is data for that product -> if not then return empty data.frame
     if(length(r$rows) != 0) {
 
+      start = ifelse(lubridate::wday(date) == 2, 4, 2)
       # if friday then add 2 days (saturday and sunday) to the data.frame -> end == 3 (2,3) else get next day info (2)
-      end = ifelse(lubridate::wday(date) == 6, 3, 2) # 6 == friday
+      end = ifelse(lubridate::wday(date) == 6, 4, ifelse(lubridate::wday(date) == 2, 4, 2)) # 6 == friday
 
       df = data.frame()
 
-      for(i in 2:end) {
+      for(i in start:end) {
 
         # Get the 1/2/3... entry of the table --> for request date always get the data of the next day
         k = r$rows[[i]]
@@ -943,5 +951,19 @@ getPHELIXDEFuturesForADate <- function(date, product) {
   }
 
   return(res)
+  }, warning = function(war){
+    print(paste("Couldn't read date ",date, ": ",   war))
+    return(data.frame())
+  }, error = function(err) {
+
+    # error handler picks up where error was generated
+    print(paste("Couldn't read date ",date, ": ",   war))
+    return(data.frame())
+
+  }, finally = {
+  }
+  )
+  }
+
 }
 

@@ -58,8 +58,8 @@ library(emarketcrawlR)
 setLogging(TRUE)
 
 
-startDate = "2017-08-02"
-endDate = "2017-08-04"
+startDate = "2019-02-14"
+endDate = "2019-02-20"
 product = "Day" # product type == Day, Weekend, Week, Month, Quarter, Year
 
 #seq.Date(as.Date("2017-08-02")-1, as.Date("2017-08-04"),1)
